@@ -20,4 +20,5 @@ from . import views
 
 urlpatterns = [
     path('', views.upload_display_video, name='upload_display_video'),
+    path('check', views.check_status, name='upload_display_video'),
 ]
