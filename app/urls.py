@@ -19,6 +19,10 @@ from django.conf import settings
 from . import views
 
 urlpatterns = [
-    path('', views.upload_display_video, name='upload_display_video'),
+    path('', views.render_home),
+    path('text_srt', views.result_srt),
+    path('pass', views.upload_display_video, name='upload_display_video'),
     path('check', views.check_status, name='upload_display_video'),
+    path('data_srt', views.result_srt),
+    path('data_text', views.result_text),
 ]

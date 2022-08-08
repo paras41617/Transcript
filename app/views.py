@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.shortcuts import render
 from .forms import UploadFileForm
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -10,39 +11,61 @@ token = ''
 jobid = ''
 conversationid = ''
 status = False
+srt = ''
+text = ''
+
+def result_srt(request):
+    url = f"https://api.symbl.ai/v1/conversations/{conversationid}/transcript"
+    payload = {"contentType": "text/srt"}
+    headers = {
+            "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token,            
+    }
+    response = requests.post(url, json=payload, headers=headers)
+    global srt
+    srt = response.text
+    filename = "my_file.txt"
+    content = srt
+    response = HttpResponse(content, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename={0}'.format(filename)
+    return response
+
+def result_text(request):
+    url = f"https://api.symbl.ai/v1/conversations/{conversationid}/messages?verbose=true&sentiment=true"
+
+    headers = {
+            "Accept": "application/json",
+                    "Authorization": "Bearer " + token,            
+    }
+
+    response = requests.get(url, headers=headers)
+    global text
+    text = response.text
+    filename = "my_file.txt"
+    content = text
+    response = HttpResponse(content, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename={0}'.format(filename)
+    return response
+
 
 def check_status(request):
     url = f"https://api.symbl.ai/v1/job/{jobid}"
-    print("url : " , url)
-    print("jobid : " , jobid)
     headers = {
         "Accept": "application/json",
         "Authorization": "Bearer " + token               
     }
 
     response = requests.get(url, headers=headers)
-    print(response.json())
-    print(response.text)
-    if(response.json()['status'] == "completed"):
-        status = True
-        url = f"https://api.symbl.ai/v1/conversations/{conversationid}/transcript"
-        payload = {"contentType": "text/srt"}
-        headers = {
-            "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token,            
-        }
-        response = requests.post(url, json=payload, headers=headers)
-        print(response.json())
-        print(response.text)
-    return render(request, "index.html", {'filename': response.text})    
-
+    response = HttpResponse(response.text)
+    return response
 
 @ensure_csrf_cookie
 def upload_display_video(request):
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
+            # form.save()
             file = request.FILES['file']
             url = "https://api.symbl.ai/oauth2/token:generate"
 
@@ -57,7 +80,6 @@ def upload_display_video(request):
             }
 
             response = requests.post(url, headers=headers, json=request_body)
-            print(response.json()['expiresIn'])
             symblai_params = {
             "name": "Sample"
             }
@@ -77,7 +99,6 @@ def upload_display_video(request):
             headers=headers,
             data=request_body
             )
-            print(response.json())
             global conversationid
             global jobid
             conversationid = response.json()['conversationId']
@@ -90,9 +111,10 @@ def upload_display_video(request):
                 }
 
             response = requests.get(url, headers=headers)
-            print(response.json())
-            print(response.text)
-            return render(request, 'index.html' , {"filename":response.text})
+            return render(request, 'build/index.html' , {"filename":response.text})
     else:
         form = UploadFileForm()
-    return render(request, 'index.html' , {"filename":None})
+    return render(request, 'build/index.html' , {"filename":None})
+
+def render_home(request):
+    return render(request, 'build/index.html')
